@@ -2,7 +2,7 @@
 
 **Developer:** SkynetAI-Labs
 **Project type:** Independent fintech engineering and commercial strategy case study
-**Status:** Labs 1–3 completed; Lab 4 implemented and locally tested, with publication and GitHub verification pending; Lab 5 planned
+**Status:** Labs 1–4 completed and verified; Lab 5 planned
 
 > Independent educational simulation. Not affiliated with, endorsed by, or connected to Revolut. All customers, accounts and transactions are fictional.
 
@@ -358,7 +358,7 @@ Current warnings concern Starlette's HTTPX TestClient integration and SlowAPI's 
 | Gitleaks tests-directory scan | No leaks found |
 | Docker build | Passed; local image `e62df17aba27` |
 | Trivy completed-image scan | Zero HIGH/CRITICAL findings across scanned OS and Python packages |
-| Lab 4 GitHub workflow | Pending publication and verification |
+| Lab 4 GitHub workflow | Passed for commit `72d40c3`; verified 23 October 2026 |
 
 Workflow scanner versions include Gitleaks 8.30.1 and Trivy 0.76.1. Local Gitleaks uses the separately installed CLI.
 
@@ -396,7 +396,7 @@ This is an educational prototype, not a production banking or fraud-prevention s
 - Database initialization, fictional data seeding and persistence require explicit setup.
 - Dependency warnings, the local Docker DNS workaround and legacy-builder notice remain documented.
 - Sequential CI steps can prevent later checks from running after an earlier failure.
-- Lab 4 GitHub verification remains pending.
+- Security results are point-in-time evidence; future runs may report new findings.
 - Commercial research and GTM strategy remain planned.
 
 Passing tests and scans demonstrate the checks performed; they do not establish production readiness. Use fictional data only.
@@ -408,7 +408,7 @@ Passing tests and scans demonstrate the checks performed; they do not establish 
 | 1 | Business Banking API | Completed |
 | 2 | Authentication and API Security | Completed |
 | 3 | Docker, GitHub Actions and DevSecOps | Completed; GitHub verification passed |
-| 4 | Fraud Detection and Transaction Monitoring | Implemented and locally tested; publication and GitHub verification pending |
+| 4 | Fraud Detection and Transaction Monitoring | Completed; GitHub verification passed for `72d40c3` |
 | 5 | Revolut Business Market Intelligence and GTM | Planned |
 
 ## Project Disclaimer
