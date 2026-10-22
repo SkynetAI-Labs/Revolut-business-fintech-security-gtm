@@ -1,6 +1,14 @@
 from app.database import get_connection
+from app.security_headers import SecurityHeadersMiddleware
 from app.schemas import AccountResponse, CustomerResponse, TransactionResponse
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+from app.dependencies import get_current_user_id, get_current_customer_id, require_admin
+
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="Revolut Business Fintech API",
@@ -10,7 +18,8 @@ app = FastAPI(
 
 
 @app.get("/")
-def home():
+@limiter.limit("60/minute")
+def home(request: Request):
     return {
         "project": "Revolut Business Fintech Security & GTM",
         "developer": "SkynetAI-Labs",
@@ -20,16 +29,23 @@ def home():
 
 
 @app.get("/health")
-def health():
+@limiter.limit("60/minute")
+def health(request: Request):
     return {"status": "healthy"}
 
 
 @app.get("/customers", response_model=list[CustomerResponse])
-def list_customers():
+@limiter.limit("30/minute")
+def list_customers(
+    request: Request,
+    customer_id: int = Depends(get_current_customer_id),
+):
     connection = get_connection()
     try:
         rows = connection.execute(
-            "SELECT id, business_name, email FROM customers ORDER BY id"
+            "SELECT id, business_name, email "
+            "FROM customers WHERE id = ?",
+            (customer_id,),
         ).fetchall()
         return [dict(row) for row in rows]
     finally:
@@ -37,12 +53,17 @@ def list_customers():
 
 
 @app.get("/accounts", response_model=list[AccountResponse])
-def list_accounts():
+@limiter.limit("30/minute")
+def list_accounts(
+    request: Request,
+    customer_id: int = Depends(get_current_customer_id),
+):
     connection = get_connection()
     try:
         rows = connection.execute(
             "SELECT id, customer_id, currency, balance_pence "
-            "FROM accounts ORDER BY id"
+            "FROM accounts WHERE customer_id = ? ORDER BY id",
+            (customer_id,),
         ).fetchall()
         return [dict(row) for row in rows]
     finally:
@@ -50,14 +71,44 @@ def list_accounts():
 
 
 @app.get("/transactions", response_model=list[TransactionResponse])
-def list_transactions():
+@limiter.limit("20/minute")
+def list_transactions(
+    request: Request,
+    customer_id: int = Depends(get_current_customer_id),
+):
     connection = get_connection()
     try:
         rows = connection.execute(
-            "SELECT id, from_account_id, to_account_id, "
-            "amount_pence, created_at "
-            "FROM transactions ORDER BY id DESC"
+            "SELECT t.id, t.from_account_id, t.to_account_id, "
+            "t.amount_pence, t.created_at "
+            "FROM transactions AS t "
+            "WHERE EXISTS ("
+            "SELECT 1 FROM accounts AS a "
+            "WHERE a.id = t.from_account_id AND a.customer_id = ?"
+            ") OR EXISTS ("
+            "SELECT 1 FROM accounts AS a "
+            "WHERE a.id = t.to_account_id AND a.customer_id = ?"
+            ") ORDER BY t.id DESC",
+            (customer_id, customer_id),
         ).fetchall()
         return [dict(row) for row in rows]
     finally:
         connection.close()
+
+
+@app.get("/admin/security-status")
+@limiter.limit("10/minute")
+def admin_security_status(
+    request: Request,
+    user_id: int = Depends(require_admin),
+):
+    return {
+        "status": "secure",
+        "access": "administrator",
+        "authenticated_user_id": user_id,
+        "environment": "portfolio-simulation",
+    }
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
