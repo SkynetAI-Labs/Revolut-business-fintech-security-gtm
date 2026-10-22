@@ -1,139 +1,167 @@
 # Revolut Business — Fintech API, Security & GTM Portfolio
 
-**Developer:** SkynetAI-Labs  
-**Project type:** Independent fintech engineering and commercial strategy case study  
-**Status:** Lab 1 implementation complete; further labs planned
+**Developer:** SkynetAI-Labs
+**Project type:** Independent fintech engineering and commercial strategy case study
+**Status:** Labs 1–2 implemented and tested; Labs 3–5 planned
 
-> Independent educational simulation inspired by fintech business banking. This project is not affiliated with, endorsed by, or connected to Revolut. No real banking systems or customer funds are used.
+> Independent educational simulation. Not affiliated with, endorsed by, or connected to Revolut. All customers, accounts and transactions are fictional.
 
 ## Project Overview
 
-A multi-stage portfolio project exploring the engineering, security, transaction monitoring, DevSecOps and go-to-market considerations of a modern business banking platform.
-
-The project combines practical software engineering with commercial research relevant to UK SMEs and fintech business development.
+A five-lab portfolio combining fintech engineering, application security, DevSecOps, transaction monitoring and commercial strategy relevant to UK SMEs.
 
 ## Lab 1 — Business Banking API
 
-### Implemented Features
-
-- Python FastAPI application
-- Interactive OpenAPI documentation
-- SQLite relational database
-- Fictional business customers and GBP accounts
-- Account balance retrieval
-- Simulated internal account transfers
-- Transaction history retrieval
-- Database foreign-key constraints
-- Non-negative account balance constraints
-- Atomic transfers using SQLite transactions
-- Insufficient-funds validation
-- Rejection of zero and negative transfer amounts
-- Rejection of same-account transfers
-- Rejection of transfers involving nonexistent accounts
+Implemented:
+- FastAPI application with interactive OpenAPI documentation
+- SQLite database with fictional business customers and GBP accounts
+- Customer, account balance and transaction history retrieval
+- Internal payment service for simulated transfers
+- Parameterised SQL and foreign-key enforcement
+- Non-negative balance constraints
+- Atomic transfers and transaction rollback
+- Insufficient-funds and currency compatibility checks
+- Rejection of invalid amounts, same-account transfers and nonexistent accounts
 - Automated API and payment integrity tests
 
-### API Endpoints
+Payment execution is an internal Python service, with no public HTTP payment endpoint.
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/` | Project information |
-| GET | `/health` | Application health |
-| GET | `/customers` | List fictional customers |
-| GET | `/accounts` | List fictional accounts and balances |
-| GET | `/transactions` | Retrieve simulated transaction history |
+## Lab 2 — Authentication and API Security
 
-Payment execution is currently implemented as an internal Python service function, not as a public HTTP payment endpoint.
+Implemented:
+- Signed JWT access tokens with required expiry and subject claims
+- Token expiry and signature validation
+- Database checks confirming authenticated users exist
+- Administrator role checks
+- Customer and account queries scoped to the authenticated customer
+- Transaction queries restricted to transfers involving the customer's accounts
+- Argon2id password hashing and password verification
+- Internal registration and credential-authentication helpers
+- Minimum 12-character registration passwords
+- Standard user role assigned on registration
+- IP-based request limits
+- Security response headers
 
-### Technology Stack
+Headers:
+- X-Content-Type-Options: nosniff
+- X-Frame-Options: DENY
+- Referrer-Policy: no-referrer
 
-- Python
-- FastAPI
-- Pydantic
-- SQLite
-- Pytest
-- HTTPX / FastAPI TestClient
-- Git and GitHub
+Registration, credential authentication and token creation are internal Python helpers. Public registration and login HTTP endpoints are not implemented.
 
-### Project Structure
+## API Endpoints
 
-```text
-app/
-  __init__.py
-  main.py
-  database.py
-  models.py
-  payments.py
-  schemas.py
-  data/                 # Local database; excluded from Git
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| GET | `/` | Public | Project information |
+| GET | `/health` | Public | Health check |
+| GET | `/customers` | Bearer token | Authenticated customer's record |
+| GET | `/accounts` | Bearer token | Authenticated customer's accounts |
+| GET | `/transactions` | Bearer token | Transfers involving the customer's accounts |
+| GET | `/admin/security-status` | Administrator bearer token | Demonstration administrator route |
 
-tests/
-  test_api.py
-  test_payments.py
-```
+Protected requests require an Authorization header containing Bearer followed by the access token.
+
+## Technology Stack
+
+Python, FastAPI, Pydantic, SQLite, PyJWT, python-dotenv, pwdlib with Argon2 support, SlowAPI, Pytest, HTTPX, Bandit, Gitleaks, Git and GitHub.
 
 ## Local Setup
 
+Run commands from the repository root in an activated Python virtual environment.
+
 Install dependencies:
 
-    python -m pip install fastapi uvicorn pytest httpx email-validator
+    python -m pip install fastapi uvicorn pytest httpx email-validator PyJWT python-dotenv 'pwdlib[argon2]' slowapi bandit
 
-Initialise database:
+Dependency versions are not yet locked in a committed manifest.
+
+Configure a private local .env file with:
+- JWT_SECRET_KEY: a securely generated signing secret
+- JWT_ALGORITHM: HS256
+- JWT_EXPIRE_MINUTES: 30
+
+Never commit the signing secret or .env file. Preserve an existing .env when continuing this lab.
+
+Initialise the database:
 
     python -m app.models
 
-Start API:
+Fictional customers, accounts and users require separate setup.
+
+Start locally:
 
     python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 
-API documentation: http://127.0.0.1:8000/docs
-
-Demo accounts require separate setup.
+[Local API documentation](http://127.0.0.1:8000/docs) is available while the server runs.
 
 ## Automated Testing
 
-Run all tests:
+Run:
 
-    python -m pytest tests/ -v
+    python -m pytest
 
-Latest verified result: 11 passed, 0 failed.
+**Latest verified result: 38 passed, 7 dependency deprecation warnings — 22 October 2026.**
 
 Coverage includes:
-- Five API endpoint tests
-- Five invalid-transfer tests
-- One successful-transfer integrity test
+- Public and authenticated banking routes
+- Missing credentials and nonexistent users
+- JWT creation, expiry and tampered signatures
+- API rejection of missing-expiry, expired and tampered tokens
+- Administrator access control
+- Customer, account and transaction isolation
+- Password hashing and verification
+- Registration validation and duplicate rejection
+- Rate limits and security headers
+- Payment validation and transfer integrity
 
-Payment tests use isolated temporary SQLite databases.
+API, payment, user, role and tenant tests use temporary SQLite database fixtures.
 
-## Security and Financial Integrity
+## Security Verification
 
-Implemented safeguards:
-- Parameterised SQL queries
-- SQLite foreign-key enforcement
-- Non-negative balance constraints
-- Atomic transfers and transaction rollback
-- Insufficient-funds validation
-- Rejection of invalid transfer amounts
-- Same-account transfer prevention
-- Currency compatibility checks
+Verified before publishing implementation commit 758a3fb:
 
-## Current Security Limitations
+| Check | Result |
+|---|---|
+| Full test suite | 38 passed |
+| Bandit application scan | No issues reported |
+| Gitleaks staged scan | No leaks found |
+| Git whitespace check | Passed |
+
+Commands used:
+
+    python -m bandit -r app/ -ll
+    gitleaks protect --staged --redact
+    git diff --cached --check
+
+Gitleaks is installed separately. The command matches the version used in this lab. The staged scan does not establish that the entire repository history is free of secrets.
+
+## Current Limitations
 
 This is an educational prototype, not a production banking system.
 
-Authentication, authorisation, account ownership checks, rate limiting and production security controls are planned for Lab 2.
+- Public registration and login endpoints are not implemented.
+- Payment execution remains an internal service.
+- Token revocation, refresh-token flows and multi-factor authentication are not implemented.
+- Rate limiting uses in-memory storage.
+- Dependency locking and reproducible setup need further work.
+- Containerisation and automated CI security checks are planned for Lab 3.
+- Fraud monitoring and commercial research remain planned.
 
-Current API listing endpoints have no access controls and must not be exposed with real customer data.
+Passing tests and scans demonstrate the checks performed; they do not establish production readiness. Use fictional data only.
 
 ## Development Roadmap
 
-- Lab 1: Business Banking API — Implementation and tests complete
-- Lab 2: Authentication and API Security — Planned
-- Lab 3: Docker, GitHub Actions and DevSecOps — Planned
-- Lab 4: Fraud Detection and Transaction Monitoring — Planned
-- Lab 5: Revolut Business Market Intelligence and GTM — Planned
+| Lab | Focus | Status |
+|---|---|---|
+| 1 | Business Banking API | Implemented and tested |
+| 2 | Authentication and API Security | Implemented and tested |
+| 3 | Docker, GitHub Actions and DevSecOps | Planned |
+| 4 | Fraud Detection and Transaction Monitoring | Planned |
+| 5 | Revolut Business Market Intelligence and GTM | Planned |
 
 ## Project Disclaimer
 
 Independent educational portfolio project developed by SkynetAI-Labs.
 
-Not affiliated with or endorsed by Revolut. All customers, accounts and transactions are fictional.
+Not affiliated with or endorsed by Revolut. No real banking systems, customer data or funds are used.
