@@ -1,4 +1,4 @@
-FROM python:3.14.4-slim@sha256:2ca02f32b4d9d893863367ce07ec1972819f476dd38d8612f2a9cb6a41cbb727
+FROM python:3.14.9-alpine@sha256:dbeb11d16bb95c3a7e3c25c842cb9f20cbc8c18f8be0461a4a0dcc861ad386a0
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -6,12 +6,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN groupadd --gid 10001 appuser \
-    && useradd --uid 10001 --gid appuser --no-create-home \
-       --shell /usr/sbin/nologin appuser
+RUN addgroup -g 10001 appuser \
+    && adduser -D -H -u 10001 -G appuser -s /sbin/nologin appuser
 
 COPY requirements.txt .
-RUN python -m pip install -r requirements.txt
+RUN python -m pip install --only-binary=:all: -r requirements.txt \
+    && python -m pip check \
+    && python -m pip uninstall -y pip \
+    && python -c "import pathlib, shutil, sysconfig; shutil.rmtree(pathlib.Path(sysconfig.get_path('stdlib')) / 'ensurepip')"
 
 COPY --chown=10001:10001 app/ ./app/
 RUN mkdir -p /app/app/data \
