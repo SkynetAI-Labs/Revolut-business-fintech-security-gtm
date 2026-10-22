@@ -1,14 +1,13 @@
+from app.monitoring_routes import router as monitoring_router
 from app.database import get_connection
 from app.security_headers import SecurityHeadersMiddleware
 from app.schemas import AccountResponse, CustomerResponse, TransactionResponse
 from fastapi import FastAPI, Depends, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 from app.dependencies import get_current_user_id, get_current_customer_id, require_admin
 
-limiter = Limiter(key_func=get_remote_address)
+from app.rate_limiting import limiter
 
 app = FastAPI(
     title="Revolut Business Fintech API",
@@ -108,6 +107,8 @@ def admin_security_status(
         "authenticated_user_id": user_id,
         "environment": "portfolio-simulation",
     }
+
+app.include_router(monitoring_router)
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.state.limiter = limiter

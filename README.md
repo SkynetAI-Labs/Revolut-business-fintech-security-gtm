@@ -2,7 +2,7 @@
 
 **Developer:** SkynetAI-Labs
 **Project type:** Independent fintech engineering and commercial strategy case study
-**Status:** Labs 1–3 implemented and tested; Lab 3 documentation and closeout in progress; Labs 4–5 planned
+**Status:** Labs 1–3 completed; Lab 4 implemented and locally tested, with publication and GitHub verification pending; Lab 5 planned
 
 > Independent educational simulation. Not affiliated with, endorsed by, or connected to Revolut. All customers, accounts and transactions are fictional.
 
@@ -10,7 +10,14 @@
 
 A five-lab portfolio combining fintech engineering, application security, DevSecOps, transaction monitoring and commercial strategy relevant to UK SMEs.
 
-Portfolio Labs 8 and 9 represent the API-development and authentication phases of this repository. They correspond to internal project Labs 1 and 2 below.
+| Portfolio lab | Internal project lab | Focus |
+|---|---|---|
+| 8 | 1 | Business Banking API |
+| 9 | 2 | Authentication and API Security |
+| 10 | 3 | Docker, GitHub Actions and DevSecOps |
+| 11 | 4 | Fraud Detection and Transaction Monitoring |
+
+These phases share one repository. Test counts refer to the combined project suite, not separate suites to be added together.
 
 ## Lab 1 — Business Banking API
 
@@ -29,7 +36,7 @@ Implemented:
 
 Payment execution is an internal Python service, with no public HTTP payment endpoint.
 
-The initial API milestone passed 11 tests. The expanded combined project suite now contains 38 passing tests.
+The initial API milestone passed 11 tests. The combined suite expanded to 38 tests during Lab 2 and 200 tests during Lab 4.
 
 ## Lab 2 — Authentication and API Security
 
@@ -66,13 +73,12 @@ Implemented:
 - Exact version pins for declared direct dependencies
 - Test JWT configuration using a fresh generated secret per pytest process
 - Fresh-environment installation and test verification
-- Successful tests from a temporary project copy without the local `.env` or banking database
-- Docker image using Python 3.14.9 and Alpine Linux
-- Base image pinned by SHA-256 digest
-- Binary-wheel-only runtime dependency installation and dependency consistency check
+- Successful tests from an isolated project copy without the local `.env` or banking database
+- Python 3.14.9 Alpine container with a digest-pinned base image
+- Binary-wheel-only runtime dependency installation and dependency consistency checking
 - Removal of pip and ensurepip after runtime dependency installation
 - Non-root application execution as UID/GID 10001
-- Docker build-context exclusions for secrets, local databases, virtual environments, caches and development files
+- Build-context exclusions for secrets, local databases, virtual environments, caches and development files
 - GitHub Actions testing and automated security checks
 
 The workflow runs on pushes to `main`, pull requests targeting `main` and manual dispatch. It uses read-only repository-content permissions and disables persisted checkout credentials.
@@ -80,26 +86,113 @@ The workflow runs on pushes to `main`, pull requests targeting `main` and manual
 Workflow checks:
 
 1. Install dependencies and check consistency
-2. Run the complete test suite
+2. Run the full test suite
 3. Scan application source with Bandit
 4. Audit installed Python packages with pip-audit
 5. Scan checked-out repository files with Gitleaks
 6. Build and export the application image
 7. Scan the image with Trivy
 
-The image is built for verification; the workflow does not publish it.
+The workflow builds an image for verification; it does not publish the image.
 
 ### Vulnerability Remediation
 
-The first GitHub run failed the container security gate. The original Debian image reported 101 HIGH and 3 CRITICAL package findings.
+The original Debian image failed container scanning with 101 HIGH and 3 CRITICAL package findings. Updated Debian and alternative Bookworm candidates also failed evaluation.
 
-A newer Debian candidate reduced the findings but still failed. An alternative Bookworm base also failed evaluation.
+The selected Alpine base reported no HIGH/CRITICAL operating-system findings. Four remaining HIGH Python findings were traced to pip's bundled libraries. The runtime image excludes installed pip and its ensurepip installation archive after dependency installation.
 
-The selected Alpine base reported no HIGH/CRITICAL operating-system findings. Four remaining HIGH Python findings were traced to libraries bundled inside pip. The runtime image now excludes installed pip and its ensurepip installation archive after dependencies are installed.
+The completed Lab 3 candidate reported zero HIGH/CRITICAL findings. No explicit vulnerability exceptions or reduced thresholds were introduced.
 
-The completed Alpine candidate reported zero HIGH/CRITICAL findings across the scanned operating-system and Python packages. No ignore exceptions or reduced failure thresholds were introduced.
+GitHub verification passed for remediation commit `d2ff68f` and documentation commit `d3c675a`.
 
-**GitHub Actions run for fix commit `d2ff68f`: passed, verified on 22 October 2026.**
+## Lab 4 — Fraud Detection and Transaction Monitoring
+
+Implemented and locally tested:
+
+- Four explainable transaction-monitoring rules
+- Configurable thresholds through `MonitoringConfig`
+- Persistent alerts linked to transactions and the sender's customer
+- Structured evidence containing observed values, thresholds and rule version
+- Transaction and detection timestamps
+- Atomic integration with the internal payment service
+- Bounded historical-analysis batches with resumable transaction-ID cursors
+- Duplicate prevention using a unique transaction/rule constraint
+- Authenticated customer-scoped alert retrieval
+- Administrator alert retrieval and final review decisions
+- Validated filters, pagination and route rate limits
+- Automated detection, integrity, replay and API security tests
+
+Alerts indicate rule matches for review, not confirmed fraud. Matching a rule does not itself block a transfer.
+
+### Detection Rules
+
+| Reason code | Severity | Alert condition |
+|---|---|---|
+| `LARGE_TRANSFER` | Medium | Single GBP transfer greater than £5,000 |
+| `HIGH_TRANSFER_FREQUENCY` | Medium | More than 5 outgoing transfers from one account within 10 minutes |
+| `HIGH_OUTGOING_VALUE` | High | GBP outgoing total greater than £10,000 from one account within 60 minutes |
+| `RAPID_REPEATED_TRANSFERS` | High | More than 3 transfers from one sender account to the same recipient account within 5 minutes |
+
+These are educational demonstration thresholds, not banking-industry standards.
+
+Amount rules use integer pence and apply to GBP only. Frequency rules count successful outgoing transfers from the sender account.
+
+The triggering transfer is included. Time-window lower boundaries are inclusive. Later transactions are excluded; equal timestamps are ordered by transaction ID. Naive SQLite timestamps are interpreted as UTC, and timezone-aware timestamps are normalised to UTC.
+
+Threshold overrides are supported through Python configuration objects. A public configuration endpoint and environment-variable threshold loader are not implemented.
+
+### Payment Integrity
+
+Monitoring runs after transaction insertion and before the payment commit, using the same database connection.
+
+- Successful payments and their alerts commit together.
+- Rejected transfers do not invoke monitoring.
+- A monitoring error rolls back balance changes, the transaction and any inserted alerts.
+- A suspicious-pattern match alone does not reject the payment.
+
+This deliberately makes monitoring availability a dependency of payment completion.
+
+### Alert Ownership and Evidence
+
+Customer ownership is derived from the sender account, not a client-supplied customer identifier.
+
+Alerts store:
+
+- Transaction and customer references
+- Rule code and severity
+- Structured detection evidence and configuration values
+- Original transaction time and detection time
+- Review status, reviewer and review time
+
+Customer responses omit customer IDs, account IDs and administrator review identities. Administrator responses include customer ownership and review metadata.
+
+### Review Workflow
+
+New alerts are `open`. Administrators can make one final decision:
+
+- `open` → `reviewed`
+- `open` → `dismissed`
+
+Decisions record the authenticated administrator and a UTC timestamp. Review updates preserve original detection evidence.
+
+Requests attempting to change a final decision return 409. Missing alerts return 404. Invalid statuses, identifiers or extra body fields are rejected.
+
+Review updates use an explicit write transaction and conditionally update only an open alert. Reopening and changing final decisions are outside scope.
+
+### Historical Analysis
+
+`analyse_historical_transactions()` in `app/monitoring.py` supports:
+
+- An explicit caller-owned database transaction
+- Batches of 1–1000 transactions, defaulting to 100
+- `after_id` pagination and a fixed `up_to_id` boundary
+- Original transaction-time assessment
+- Duplicate-safe replay without resetting review decisions
+- Caller-controlled commit or rollback
+
+Callers should retain the returned `up_to_id` across a replay and commit each successful batch. On errors, callers must roll back the batch.
+
+This is an internal Python helper, not a public HTTP endpoint or scheduled background worker.
 
 ## API Endpoints
 
@@ -110,11 +203,33 @@ The completed Alpine candidate reported zero HIGH/CRITICAL findings across the s
 | GET | `/customers` | Bearer token | Authenticated customer's record |
 | GET | `/accounts` | Bearer token | Authenticated customer's accounts |
 | GET | `/transactions` | Bearer token | Transfers involving the customer's accounts |
-| GET | `/admin/security-status` | Administrator bearer token | Demonstration administrator route |
+| GET | `/admin/security-status` | Administrator | Demonstration administrator route |
+| GET | `/monitoring/alerts` | Bearer token | Authenticated customer's alerts |
+| GET | `/monitoring/admin/alerts` | Administrator | Alert retrieval across customers |
+| PATCH | `/monitoring/admin/alerts/{alert_id}/review` | Administrator | Final review decision |
 
 Protected requests require an `Authorization: Bearer <token>` header.
 
-Rate limits per remote address:
+Alert list filters:
+
+- `status`: `open`, `reviewed` or `dismissed`
+- `severity`: `medium` or `high`
+- `rule_code`: one of the four implemented reason codes
+- `limit`: 1–100, default 50
+- `before_id`: positive alert-ID cursor for the next page
+- `customer_id`: positive ID, available only on the administrator listing
+
+Lists return newest alert IDs first. For the next page, pass the last returned ID as `before_id`.
+
+Review request body:
+
+    {"status": "reviewed"}
+
+The alternative decision is `dismissed`. Extra body fields are forbidden.
+
+### Rate Limits
+
+Limits use remote-address keys and in-memory storage.
 
 | Routes | Limit |
 |---|---|
@@ -122,12 +237,15 @@ Rate limits per remote address:
 | `/customers`, `/accounts` | 30/minute each |
 | `/transactions` | 20/minute |
 | `/admin/security-status` | 10/minute |
+| `/monitoring/alerts` | 30/minute |
+| `/monitoring/admin/alerts` | 10/minute |
+| `/monitoring/admin/alerts/{alert_id}/review` | 10/minute |
 
 ## Technology Stack
 
 Python, FastAPI, Pydantic, SQLite, PyJWT, python-dotenv, pwdlib with Argon2 support, SlowAPI, Uvicorn, pytest, HTTPX, Docker, Alpine Linux, GitHub Actions, Bandit, pip-audit, Gitleaks and Trivy.
 
-CI and the selected container use Python 3.14.9. The original Ubuntu virtual environment used Python 3.14.4.
+CI and the container use Python 3.14.9. The verified local Ubuntu environment uses Python 3.14.4.
 
 ## Local Setup
 
@@ -137,70 +255,66 @@ Install runtime dependencies:
 
     python -m pip install -r requirements.txt
 
-For tests and development security tools:
+For tests and development tools:
 
     python -m pip install -r requirements-dev.txt
     python -m pip check
 
-The manifests pin direct dependencies. Transitive dependencies are not fully locked or hash-pinned.
+Direct dependencies are pinned. Transitive dependencies are not fully locked or hash-pinned.
 
-Configure a private local `.env` file with:
+Configure a private `.env` file with:
 
 - `JWT_SECRET_KEY`: a securely generated signing secret
 - `JWT_ALGORITHM`: `HS256`
 - `JWT_EXPIRE_MINUTES`: `30`
 
-Never commit the signing secret or `.env` file. Preserve an existing `.env` when continuing the project.
+Never commit the secret or `.env`. Preserve existing local configuration when continuing the project.
 
-Initialise the database:
+Initialise or extend the database schema:
 
     python -m app.models
 
-Fictional customers, accounts and users require separate setup.
+The initializer adds monitoring storage without replacing existing banking tables. Run it before using Lab 4 against an older database. Repeatable initialization and preservation of existing records were tested with temporary databases.
+
+Fictional customers, accounts and users require separate setup. Schema initialization does not seed them.
 
 Start locally:
 
     python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 
-API documentation while the server runs:
+API documentation while running:
 
 http://127.0.0.1:8000/docs
 
 ## Container Usage
 
-Build the image:
+Build:
 
     docker build -t revolut-fintech-api:local .
 
-In the verified Ubuntu/WSL environment, Docker inherited a DNS resolver that failed inside its default network. The local build used this workaround:
+In the verified Ubuntu/WSL environment, inherited Docker DNS failed. Local builds used:
 
     docker build --network=host -t revolut-fintech-api:local .
 
-The GitHub workflow passed with the standard build command. The local workaround does not change the application's runtime networking.
+Lab 3 GitHub builds passed with the standard command. The workaround does not change runtime networking.
 
-Start the container using local configuration:
+Start with local configuration:
 
     docker run -d --name revolut-fintech-api --env-file .env -p 127.0.0.1:8000:8000 revolut-fintech-api:local
 
-The image excludes `.env` and the local banking database. Configuration is supplied at runtime.
-
-For a new container, initialise an empty database schema separately:
+Initialise schema inside the running container:
 
     docker exec revolut-fintech-api python -m app.models
 
-This does not seed customers, accounts or users. The health route does not check database readiness. Authenticated banking operations require suitable fictional database records.
+The image excludes the local database and `.env`. Configuration is supplied at runtime.
 
-Database changes remain in the container's writable layer unless persistence is configured. Removing that container loses those changes.
+Database changes remain in the container's writable layer unless persistence is configured. Removing the container loses those changes.
 
-The final runtime image intentionally has no pip or ensurepip. Change dependencies through the manifests and rebuild the image.
+The health route does not check database readiness. Banking and monitoring routes require initialized schema and appropriate fictional records.
 
-Verified container behaviour:
+The final runtime intentionally has no pip or ensurepip. Change dependency manifests and rebuild the image.
 
-- `/health`: 200 with the expected response
-- `/accounts` without credentials: 401 with `WWW-Authenticate: Bearer`
-- All three security headers present
-- UID/GID 10001
-- Graceful container shutdown
+Lab 3 runtime checks verified health, unauthenticated rejection, security headers, UID/GID 10001 and graceful shutdown. Lab 4's updated image was built and scanned locally; new route behaviour was verified through isolated API tests.
 
 ## Automated Testing
 
@@ -210,69 +324,80 @@ Run:
 
 `tests/conftest.py` supplies test JWT settings before application imports. Database-dependent tests use temporary SQLite fixtures.
 
-**Latest verified local result: 38 passed, 7 dependency deprecation warnings — 22 October 2026.**
-
-This result was verified in a fresh Ubuntu environment, an isolated project copy and an Alpine Python 3.14.9 compatibility container.
+**Latest verified Lab 4 local result: 200 passed, 10 dependency deprecation warnings — 22 October 2026.**
 
 Coverage includes:
 
-- Public and authenticated banking routes
-- Missing credentials and nonexistent users
-- JWT creation, expiry and tampered signatures
-- API rejection of missing-expiry, expired and tampered tokens
-- Administrator access control
-- Customer, account and transaction isolation
-- Password hashing and verification
-- Registration validation and duplicate rejection
-- Rate limits and security headers
-- Payment validation and transfer integrity
+- Existing API, authentication, registration and payment behaviour
+- JWT expiry, signature checks and required claims
+- Administrator access and customer isolation
+- Threshold boundaries and configuration validation
+- Time-window boundaries, UTC offsets and transaction ordering
+- Sender and recipient scoping
+- Alert schema constraints and duplicate prevention
+- Historical replay, pagination boundaries and rollback
+- Payment and alert atomicity during monitoring failure
+- Customer response privacy and administrator alert access
+- Validated filters, pagination and rate limits
+- Review permissions, recorded decisions and protected evidence
 
-The warnings concern Starlette's HTTPX TestClient integration and SlowAPI's deprecated asyncio API usage. They remain unresolved.
+Historical milestones: Lab 1 passed 11 tests; Labs 2–3 passed the expanded 38-test suite. Lab 3 also verified its suite in a fresh environment, an isolated source copy and an Alpine compatibility container.
+
+Current warnings concern Starlette's HTTPX TestClient integration and SlowAPI's deprecated asyncio API usage. They remain unresolved.
 
 ## Security Verification
 
-| Check | Verified result or enforced policy |
+### Lab 4 Local Evidence
+
+| Check | Result |
 |---|---|
-| Full test suite | 38 passing tests locally; GitHub test step passed |
-| Dependency consistency | Passed |
-| Bandit | GitHub scan passed; reported findings fail the job |
-| pip-audit | GitHub audit passed; reported vulnerabilities fail the job |
-| Gitleaks | GitHub file scan passed; staged scans reported no leaks |
-| Trivy | Completed candidate reported zero HIGH/CRITICAL findings; GitHub scan passed |
-| Git whitespace checks | Passed before publication |
+| Full test suite | 200 passed, 10 warnings |
+| Bandit application scan | No issues identified; no skipped files or suppressed lines |
+| pip-audit | No known vulnerabilities found |
+| Gitleaks application-directory scan | No leaks found |
+| Gitleaks tests-directory scan | No leaks found |
+| Docker build | Passed; local image `e62df17aba27` |
+| Trivy completed-image scan | Zero HIGH/CRITICAL findings across scanned OS and Python packages |
+| Lab 4 GitHub workflow | Pending publication and verification |
 
-Workflow versions include Gitleaks 8.30.1 and Trivy 0.76.1.
+Workflow scanner versions include Gitleaks 8.30.1 and Trivy 0.76.1. Local Gitleaks uses the separately installed CLI.
 
-Trivy fails on HIGH/CRITICAL vulnerabilities, including unfixed findings. No explicit vulnerability exceptions were added. Results reflect the vulnerability database available at scan time.
+Trivy fails on HIGH/CRITICAL vulnerabilities, including unfixed findings. No explicit vulnerability exceptions were added. Results reflect the vulnerability database at scan time.
 
-Trivy also emitted a third-party SBOM accuracy warning. A passing scan does not guarantee that every vulnerability or component was detected.
+Trivy emitted a third-party SBOM accuracy warning. Passing scans do not guarantee every component or vulnerability was detected.
 
-Local commands used:
+Local checks:
 
     python -m bandit -r app
     python -m pip_audit
+    gitleaks detect --no-git --source app --redact
+    gitleaks detect --no-git --source tests --redact
     gitleaks protect --staged --redact
     git diff --cached --check
 
-The local staged Gitleaks command matches the separately installed version used in this lab. The GitHub workflow uses the newer containerised CLI.
-
-Neither staged scanning nor the workflow's checked-out-file scan establishes that the entire Git history is free of secrets.
+Directory scans, staged scans and the workflow's checked-out-file scan do not establish that the entire Git history is free of secrets.
 
 ## Current Limitations
 
-This is an educational prototype, not a production banking system.
+This is an educational prototype, not a production banking or fraud-prevention system.
 
-- Public registration and login endpoints are not implemented.
-- Payment execution remains an internal service.
-- Token revocation, refresh-token flows and multi-factor authentication are not implemented.
-- Rate limiting uses remote-address keys and in-memory storage.
+- Rule matches do not prove fraud; demonstration thresholds can produce false positives and miss suspicious activity.
+- No machine learning, automatic blocking, external banking integration or public payment endpoint.
+- Public login/registration, token revocation, refresh tokens and MFA are not implemented.
+- Amount rules cover GBP only.
+- Historical assessment relies on current sender-account ownership and currency; the transaction table does not preserve historical snapshots of those attributes.
+- Historical analysis requires caller-controlled execution; no scheduled monitoring worker exists.
+- Assessment reads the sender's transaction history into memory. Bounded replay batches do not bound that per-assessment history read.
+- Malformed historical timestamps can stop assessment and require investigation.
+- Monitoring errors roll back payments, coupling payment availability to monitoring.
+- Review decisions are final; there is no reopening flow or separate review-event history.
+- SQLite and in-memory rate limiting are demonstration choices with scaling limitations.
 - Direct dependency pins do not provide a complete transitive lockfile.
-- Container database initialisation, fictional data seeding and persistence require explicit setup.
-- Container smoke checks covered health and unauthenticated rejection; authenticated behaviour was covered by automated tests.
-- The local Docker DNS workaround and legacy-builder deprecation notice remain environment considerations.
-- Dependency deprecation warnings remain unresolved.
-- Security steps run sequentially, so a failure can prevent later checks from running.
-- Fraud monitoring and commercial research remain planned.
+- Database initialization, fictional data seeding and persistence require explicit setup.
+- Dependency warnings, the local Docker DNS workaround and legacy-builder notice remain documented.
+- Sequential CI steps can prevent later checks from running after an earlier failure.
+- Lab 4 GitHub verification remains pending.
+- Commercial research and GTM strategy remain planned.
 
 Passing tests and scans demonstrate the checks performed; they do not establish production readiness. Use fictional data only.
 
@@ -280,10 +405,10 @@ Passing tests and scans demonstrate the checks performed; they do not establish 
 
 | Lab | Focus | Status |
 |---|---|---|
-| 1 | Business Banking API | Implemented and tested |
-| 2 | Authentication and API Security | Implemented and tested |
-| 3 | Docker, GitHub Actions and DevSecOps | Implemented; GitHub checks passed; documentation and closeout in progress |
-| 4 | Fraud Detection and Transaction Monitoring | Planned |
+| 1 | Business Banking API | Completed |
+| 2 | Authentication and API Security | Completed |
+| 3 | Docker, GitHub Actions and DevSecOps | Completed; GitHub verification passed |
+| 4 | Fraud Detection and Transaction Monitoring | Implemented and locally tested; publication and GitHub verification pending |
 | 5 | Revolut Business Market Intelligence and GTM | Planned |
 
 ## Project Disclaimer

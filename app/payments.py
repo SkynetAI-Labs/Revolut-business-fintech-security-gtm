@@ -1,3 +1,4 @@
+from app.monitoring import monitor_transaction
 from app.database import get_connection
 
 
@@ -48,6 +49,8 @@ def transfer_funds(from_account_id: int, to_account_id: int, amount_pence: int):
                VALUES (?, ?, ?)""",
             (from_account_id, to_account_id, amount_pence)
         )
+
+        monitor_transaction(connection, cursor.lastrowid)
 
         connection.commit()
 

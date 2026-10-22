@@ -1,3 +1,4 @@
+from app.monitoring_schema import create_monitoring_tables
 from app.database import get_connection
 
 
@@ -45,6 +46,8 @@ def create_tables():
                 CHECK (from_account_id != to_account_id)
             );
         """)
+
+        create_monitoring_tables(connection)
 
         connection.commit()
 
