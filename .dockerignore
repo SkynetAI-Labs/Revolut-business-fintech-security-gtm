@@ -1,0 +1,44 @@
+# Git history and workflows
+.git
+.github
+
+# Virtual environments
+.venv*
+venv
+env
+**/.venv*
+**/venv
+**/env
+
+# Secrets and local configuration
+.env
+.env.*
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+
+# Local databases
+app/data/
+**/*.db
+**/*.db-*
+**/*.sqlite
+**/*.sqlite3
+**/*.sqlite-*
+**/*.sqlite3-*
+
+# Python caches and test outputs
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage*
+**/htmlcov
+**/coverage.xml
+
+# Development files
+tests/
+requirements-dev.txt
+README.md
+**/*.log

@@ -1,5 +1,6 @@
 # Python virtual environments
 .venv/
+.venv-lab3-check/
 venv/
 
 # Python caches
