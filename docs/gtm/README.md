@@ -4,7 +4,7 @@
 **Prepared:** 23 October 2026
 **Internal project lab:** 5
 **Portfolio lab:** 12
-**Status:** Case study assembled; final review and publication pending
+**Status:** Case study published; structural and arithmetic checks passed; GitHub checks passed for `9ab86f9`
 
 > Independent educational analysis. Not affiliated with or endorsed by
 > Revolut or the comparison providers. No outreach, customer interviews,
@@ -148,5 +148,8 @@ They do not validate market demand or any provider's production systems.
 
 ## Publication Status
 
-Final source, calculation, document-link and claim checks are pending.
-Repository and profile README updates must accurately reflect that status.
+The case study was published in commit `9ab86f9`, with GitHub checks
+passing on 23 October 2026. Local checks confirmed the document structure,
+source-register consistency, document links and headline arithmetic.
+These checks do not validate customer demand, assumptions or commercial
+viability. Research limitations and unresolved evidence remain documented.

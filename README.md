@@ -2,7 +2,7 @@
 
 **Developer:** SkynetAI-Labs
 **Project type:** Independent fintech engineering and commercial strategy case study
-**Status:** Labs 1–4 completed and verified; Lab 5 documents prepared, final review and publication pending
+**Status:** Labs 1–5 completed; technical checks passed and Lab 5 research and hypothetical GTM strategy published
 
 > Independent educational simulation. Not affiliated with, endorsed by, or connected to Revolut. All customers, accounts and transactions are fictional.
 
@@ -404,8 +404,7 @@ Passing tests and scans demonstrate the checks performed; they do not establish 
 
 ## Lab 5 — Market Intelligence and GTM Strategy
 
-**Status:** Research and strategy documents prepared; final review and
-GitHub publication pending.
+**Status:** Research and strategy case study published; GitHub checks passed for `9ab86f9`.
 
 [Read the complete GTM case study](docs/gtm/README.md).
 
@@ -437,7 +436,7 @@ remain unvalidated.
 | 2 | Authentication and API Security | Completed |
 | 3 | Docker, GitHub Actions and DevSecOps | Completed; GitHub verification passed |
 | 4 | Fraud Detection and Transaction Monitoring | Completed; GitHub verification passed for `72d40c3` |
-| 5 | Revolut Business Market Intelligence and GTM | Documents prepared; final review and publication pending |
+| 5 | Revolut Business Market Intelligence and GTM | Completed; case study published and GitHub checks passed for `9ab86f9` |
 
 ## Project Disclaimer
 
