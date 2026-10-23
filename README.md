@@ -2,7 +2,7 @@
 
 **Developer:** SkynetAI-Labs
 **Project type:** Independent fintech engineering and commercial strategy case study
-**Status:** Labs 1–4 completed and verified; Lab 5 planned
+**Status:** Labs 1–4 completed and verified; Lab 5 documents prepared, final review and publication pending
 
 > Independent educational simulation. Not affiliated with, endorsed by, or connected to Revolut. All customers, accounts and transactions are fictional.
 
@@ -16,6 +16,7 @@ A five-lab portfolio combining fintech engineering, application security, DevSec
 | 9 | 2 | Authentication and API Security |
 | 10 | 3 | Docker, GitHub Actions and DevSecOps |
 | 11 | 4 | Fraud Detection and Transaction Monitoring |
+| 12 | 5 | Business Market Intelligence and GTM Strategy |
 
 These phases share one repository. Test counts refer to the combined project suite, not separate suites to be added together.
 
@@ -401,6 +402,33 @@ This is an educational prototype, not a production banking or fraud-prevention s
 
 Passing tests and scans demonstrate the checks performed; they do not establish production readiness. Use fictional data only.
 
+## Lab 5 — Market Intelligence and GTM Strategy
+
+**Status:** Research and strategy documents prepared; final review and
+GitHub publication pending.
+
+[Read the complete GTM case study](docs/gtm/README.md).
+
+Prepared:
+
+- UK SME market context and a dated source register.
+- Revolut Business product, pricing and eligibility analysis.
+- Competitor comparison covering Wise, Starling and HSBC.
+- Scenario pricing with unresolved cross-border costs identified.
+- Assumption-based segment scoring and sensitivity analysis.
+- A provisional agency ICP, positioning and buyer messaging.
+- Draft discovery materials and a hypothetical 90-day pilot.
+- A resource, funnel and acquisition-cost model with risk controls.
+
+The model assumes 75 hours and GBP150 direct cash, producing GBP2,400
+economic cost at an assumed GBP30 hourly value. Its base case produces
+two expected activations; these are hypothetical values, not results.
+
+No interviews, outreach, campaigns or customer acquisitions were
+conducted. No provider partnership or commission is assumed.
+Customer demand, complete cross-border costs and commercial viability
+remain unvalidated.
+
 ## Development Roadmap
 
 | Lab | Focus | Status |
@@ -409,7 +437,7 @@ Passing tests and scans demonstrate the checks performed; they do not establish 
 | 2 | Authentication and API Security | Completed |
 | 3 | Docker, GitHub Actions and DevSecOps | Completed; GitHub verification passed |
 | 4 | Fraud Detection and Transaction Monitoring | Completed; GitHub verification passed for `72d40c3` |
-| 5 | Revolut Business Market Intelligence and GTM | Planned |
+| 5 | Revolut Business Market Intelligence and GTM | Documents prepared; final review and publication pending |
 
 ## Project Disclaimer
 
